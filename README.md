@@ -26,7 +26,7 @@ Add to your Claude Desktop config file:
   "mcpServers": {
     "sharesight": {
       "command": "npx",
-      "args": ["-y", "github:sryburn/sharesight-mcp"],
+      "args": ["-y", "github:robdevops/sharesight-mcp"],
       "env": {
         "SHARESIGHT_CLIENT_ID": "your_client_id",
         "SHARESIGHT_CLIENT_SECRET": "your_client_secret"
@@ -60,8 +60,10 @@ By default the server speaks MCP over stdio. It can also run as a Streamable HTT
 
 ```bash
 SHARESIGHT_CLIENT_ID=... SHARESIGHT_CLIENT_SECRET=... \
-  node dist/index.js --http [--host 127.0.0.1] [--port 8932]
+  npx -y github:robdevops/sharesight-mcp --http [--host 127.0.0.1] [--port 8932]
 ```
+
+(From a source checkout, use `node dist/index.js --http` instead.)
 
 The endpoint is `http://127.0.0.1:8932/mcp`. Options:
 
@@ -70,6 +72,18 @@ The endpoint is `http://127.0.0.1:8932/mcp`. Options:
 | `--http` | off | Serve Streamable HTTP instead of stdio |
 | `--host` | `127.0.0.1` | Interface to bind to |
 | `--port` | `8932` | Port to listen on |
+
+Then point an MCP client that supports Streamable HTTP at the URL in its `mcp_servers.json` (or equivalent). The credentials stay with the server process, so the client entry needs only the URL:
+
+```json
+{
+  "mcpServers": {
+    "sharesight": {
+      "url": "http://127.0.0.1:8932/mcp"
+    }
+  }
+}
+```
 
 The HTTP server is stateless (no sessions): each `POST /mcp` is handled independently, and other methods return `405`.
 
@@ -82,7 +96,7 @@ This server uses the OAuth 2.0 **client credentials** grant type. Your `SHARESIG
 ## Install from Source
 
 ```bash
-git clone https://github.com/sryburn/sharesight-mcp.git
+git clone https://github.com/robdevops/sharesight-mcp.git
 cd sharesight-mcp
 npm install
 npm run build
@@ -115,15 +129,25 @@ npm start       # Run the server
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Original work by [Haizzz](https://github.com/Haizzz/sharesight-mcp).
+MIT — see [LICENSE](LICENSE). Original work by [Haizzz](https://github.com/Haizzz/sharesight-mcp), forked and extended by [sryburn](https://github.com/sryburn/sharesight-mcp).
 
-## Fork Notes
+## Credits & Fork Notes
 
-This is a fork of [Haizzz/sharesight-mcp](https://github.com/Haizzz/sharesight-mcp). Key changes from the original:
+This project is a fork of [sryburn/sharesight-mcp](https://github.com/sryburn/sharesight-mcp), which is itself a fork of [Haizzz/sharesight-mcp](https://github.com/Haizzz/sharesight-mcp). Thanks to both authors.
+
+**[Haizzz/sharesight-mcp](https://github.com/Haizzz/sharesight-mcp)** — the original MCP server for the Sharesight API.
+
+**[sryburn/sharesight-mcp](https://github.com/sryburn/sharesight-mcp)** — changes from the original:
 
 - Stripped down to two read-only tools (`list_portfolios`, `get_performance_report`) covering the core portfolio performance use case
 - Switched from OAuth 2.0 authorization code flow to **client credentials** grant type, eliminating the need for a one-time browser-based auth setup and stored token files
 - Credentials are passed via environment variables only; no state is written to disk
+
+**[robdevops/sharesight-mcp](https://github.com/robdevops/sharesight-mcp)** (this repository) — changes from sryburn's fork:
+
+- Added a stateless Streamable HTTP mode (`--http`)
+- Concurrent requests share a single in-flight token fetch
+- Dependency security updates
 
 ## Support
 

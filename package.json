@@ -24,10 +24,10 @@
     "investment",
     "portfolio"
   ],
-  "author": "sryburn",
+  "author": "robdevops",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sryburn/sharesight-mcp.git"
+    "url": "https://github.com/robdevops/sharesight-mcp.git"
   },
   "license": "MIT",
   "dependencies": {
