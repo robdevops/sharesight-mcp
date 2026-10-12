@@ -131,9 +131,10 @@ On Linux, run the server as a systemd user service. These steps assume the repo 
 
    ```bash
    mkdir -p ~/.config/sharesight-mcp
-   printf 'SHARESIGHT_CLIENT_ID=your_client_id\nSHARESIGHT_CLIENT_SECRET=your_client_secret\n' \
-     > ~/.config/sharesight-mcp/env
+   touch ~/.config/sharesight-mcp/env
    chmod 600 ~/.config/sharesight-mcp/env
+   echo 'SHARESIGHT_CLIENT_ID=your_client_id' >> ~/.config/sharesight-mcp/env
+   echo 'SHARESIGHT_CLIENT_SECRET=your_client_secret' >> ~/.config/sharesight-mcp/env
    ```
 
 2. Create `~/.config/systemd/user/sharesight-mcp.service`:
