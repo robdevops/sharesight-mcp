@@ -56,14 +56,18 @@ Ask Claude things like:
 
 ## Streamable HTTP mode
 
-By default the server speaks MCP over stdio. It can also run as a Streamable HTTP server, for clients that connect to a URL rather than launching a process:
+By default the server speaks MCP over stdio. It can also run as a Streamable HTTP server, for clients that connect to a URL rather than launching a process.
+
+Build from source (see [Install from Source](#install-from-source)), then start it:
 
 ```bash
 SHARESIGHT_CLIENT_ID=... SHARESIGHT_CLIENT_SECRET=... \
-  npx -y github:robdevops/sharesight-mcp --http [--host 127.0.0.1] [--port 8932]
+  node dist/index.js --http [--host 127.0.0.1] [--port 8932]
 ```
 
-(From a source checkout, use `node dist/index.js --http` instead.)
+You must start the server yourself before a client can connect; a `url` entry in a client config does not launch anything.
+
+> `npx -y github:robdevops/sharesight-mcp --http` also works, but the first run clones, installs and builds (about a minute or more), and `npx` caches git packages, so you may keep getting a stale build. Running from a source checkout avoids both.
 
 The endpoint is `http://127.0.0.1:8932/mcp`. Options:
 
@@ -88,6 +92,49 @@ Then point an MCP client that supports Streamable HTTP at the URL in its `mcp_se
 The HTTP server is stateless (no sessions): each `POST /mcp` is handled independently, and other methods return `405`.
 
 > **Security warning:** the HTTP endpoint has **no authentication** and no `Origin`/`Host` validation, and every request is served using your Sharesight credentials. Anyone who can reach the port can read your portfolio data. Keep the default loopback binding, and do not use `--host 0.0.0.0` (or expose the port) unless you put it behind an authenticating reverse proxy or a firewall. Browsers can also reach localhost services via DNS rebinding, so only run it when you need it.
+
+### Run on boot (systemd)
+
+On Linux, run the server as a systemd user service. These steps assume the repo is built at `~/sharesight-mcp`.
+
+1. Store the credentials in a private file (not in the unit file):
+
+   ```bash
+   mkdir -p ~/.config/sharesight-mcp
+   printf 'SHARESIGHT_CLIENT_ID=your_client_id\nSHARESIGHT_CLIENT_SECRET=your_client_secret\n' \
+     > ~/.config/sharesight-mcp/env
+   chmod 600 ~/.config/sharesight-mcp/env
+   ```
+
+2. Create `~/.config/systemd/user/sharesight-mcp.service`:
+
+   ```ini
+   [Unit]
+   Description=Sharesight MCP server (HTTP)
+   After=network-online.target
+
+   [Service]
+   EnvironmentFile=%h/.config/sharesight-mcp/env
+   ExecStart=/usr/bin/env node %h/sharesight-mcp/dist/index.js --http --host 127.0.0.1 --port 8932
+   Restart=on-failure
+
+   [Install]
+   WantedBy=default.target
+   ```
+
+   If `node` is installed via nvm or similar, replace `/usr/bin/env node` with the absolute path from `which node`.
+
+3. Enable and start it, and allow it to start at boot without an active login:
+
+   ```bash
+   systemctl --user daemon-reload
+   systemctl --user enable --now sharesight-mcp
+   loginctl enable-linger "$USER"
+   ```
+
+Check it with `systemctl --user status sharesight-mcp` and `journalctl --user -u sharesight-mcp -f`. After updating the code (`git pull && npm install && npm run build`), restart it with `systemctl --user restart sharesight-mcp`.
+
+An always-on server widens the exposure described in the warning below, so keep it bound to `127.0.0.1`.
 
 ## Authentication
 
