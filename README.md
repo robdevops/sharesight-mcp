@@ -129,15 +129,25 @@ npm start       # Run the server
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Original work by [Haizzz](https://github.com/Haizzz/sharesight-mcp).
+MIT — see [LICENSE](LICENSE). Original work by [Haizzz](https://github.com/Haizzz/sharesight-mcp), forked and extended by [sryburn](https://github.com/sryburn/sharesight-mcp).
 
-## Fork Notes
+## Credits & Fork Notes
 
-This is a fork of [Haizzz/sharesight-mcp](https://github.com/Haizzz/sharesight-mcp). Key changes from the original:
+This project is a fork of [sryburn/sharesight-mcp](https://github.com/sryburn/sharesight-mcp), which is itself a fork of [Haizzz/sharesight-mcp](https://github.com/Haizzz/sharesight-mcp). Thanks to both authors.
+
+**[Haizzz/sharesight-mcp](https://github.com/Haizzz/sharesight-mcp)** — the original MCP server for the Sharesight API.
+
+**[sryburn/sharesight-mcp](https://github.com/sryburn/sharesight-mcp)** — changes from the original:
 
 - Stripped down to two read-only tools (`list_portfolios`, `get_performance_report`) covering the core portfolio performance use case
 - Switched from OAuth 2.0 authorization code flow to **client credentials** grant type, eliminating the need for a one-time browser-based auth setup and stored token files
 - Credentials are passed via environment variables only; no state is written to disk
+
+**[robdevops/sharesight-mcp](https://github.com/robdevops/sharesight-mcp)** (this repository) — changes from sryburn's fork:
+
+- Added a stateless Streamable HTTP mode (`--http`)
+- Concurrent requests share a single in-flight token fetch
+- Dependency security updates
 
 ## Support
 
