@@ -159,8 +159,10 @@ On Linux, run the server as a systemd user service. These steps assume the repo 
    ```bash
    systemctl --user daemon-reload
    systemctl --user enable --now sharesight-mcp
-   loginctl enable-linger "$USER"
+   sudo loginctl enable-linger "$USER"
    ```
+
+   Linger keeps your user service manager running at boot without a login. Enabling it requires administrator authorization (hence `sudo`); everything else here runs as your normal user.
 
 Check it with `systemctl --user status sharesight-mcp` and `journalctl --user -u sharesight-mcp -f`. After updating the code (`git pull && npm install && npm run build`), restart it with `systemctl --user restart sharesight-mcp`.
 
