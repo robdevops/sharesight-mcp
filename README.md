@@ -115,7 +115,7 @@ On Linux, run the server as a systemd user service. These steps assume the repo 
 
    [Service]
    EnvironmentFile=%h/.config/sharesight-mcp/env
-   ExecStart=/usr/bin/env node %h/sharesight-mcp/dist/index.js --http --host 127.0.0.1 --port 8932
+   ExecStart=/usr/bin/env node %h/sharesight-mcp/dist/index.js --http
    Restart=on-failure
 
    [Install]
@@ -134,7 +134,7 @@ On Linux, run the server as a systemd user service. These steps assume the repo 
 
 Check it with `systemctl --user status sharesight-mcp` and `journalctl --user -u sharesight-mcp -f`. After updating the code (`git pull && npm install && npm run build`), restart it with `systemctl --user restart sharesight-mcp`.
 
-An always-on server widens the exposure described in the warning below, so keep it bound to `127.0.0.1`.
+An always-on server widens the exposure described in the warning above, so leave `--host` at its default (`127.0.0.1`).
 
 ## Authentication
 
