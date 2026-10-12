@@ -23,6 +23,7 @@ export class OAuthManager {
   private clientId: string;
   private clientSecret: string;
   private cached: CachedToken | null = null;
+  private inflight: Promise<void> | null = null;
 
   constructor({ clientId, clientSecret }: OAuthManagerOpts) {
     this.clientId = clientId;
@@ -61,7 +62,11 @@ export class OAuthManager {
 
   async getValidAccessToken(): Promise<string> {
     if (!this.cached || Date.now() >= this.cached.expires_at) {
-      await this.fetchToken();
+      // Share one in-flight fetch between concurrent callers.
+      this.inflight ??= this.fetchToken().finally(() => {
+        this.inflight = null;
+      });
+      await this.inflight;
     }
     return this.cached!.access_token;
   }
