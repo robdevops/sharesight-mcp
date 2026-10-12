@@ -26,7 +26,7 @@ Add to your Claude Desktop config file:
   "mcpServers": {
     "sharesight": {
       "command": "npx",
-      "args": ["-y", "github:sryburn/sharesight-mcp"],
+      "args": ["-y", "github:robdevops/sharesight-mcp"],
       "env": {
         "SHARESIGHT_CLIENT_ID": "your_client_id",
         "SHARESIGHT_CLIENT_SECRET": "your_client_secret"
@@ -60,8 +60,10 @@ By default the server speaks MCP over stdio. It can also run as a Streamable HTT
 
 ```bash
 SHARESIGHT_CLIENT_ID=... SHARESIGHT_CLIENT_SECRET=... \
-  node dist/index.js --http [--host 127.0.0.1] [--port 8932]
+  npx -y github:robdevops/sharesight-mcp --http [--host 127.0.0.1] [--port 8932]
 ```
+
+(From a source checkout, use `node dist/index.js --http` instead.)
 
 The endpoint is `http://127.0.0.1:8932/mcp`. Options:
 
@@ -70,6 +72,18 @@ The endpoint is `http://127.0.0.1:8932/mcp`. Options:
 | `--http` | off | Serve Streamable HTTP instead of stdio |
 | `--host` | `127.0.0.1` | Interface to bind to |
 | `--port` | `8932` | Port to listen on |
+
+Then point an MCP client that supports Streamable HTTP at the URL in its `mcp_servers.json` (or equivalent). The credentials stay with the server process, so the client entry needs only the URL:
+
+```json
+{
+  "mcpServers": {
+    "sharesight": {
+      "url": "http://127.0.0.1:8932/mcp"
+    }
+  }
+}
+```
 
 The HTTP server is stateless (no sessions): each `POST /mcp` is handled independently, and other methods return `405`.
 
@@ -82,7 +96,7 @@ This server uses the OAuth 2.0 **client credentials** grant type. Your `SHARESIG
 ## Install from Source
 
 ```bash
-git clone https://github.com/sryburn/sharesight-mcp.git
+git clone https://github.com/robdevops/sharesight-mcp.git
 cd sharesight-mcp
 npm install
 npm run build
