@@ -54,11 +54,41 @@ Ask Claude things like:
 | `list_portfolios` | List all portfolios in the account |
 | `get_performance_report` | Get a full performance breakdown for a portfolio, including all holdings and their gains, over a specified date range |
 
-## Streamable HTTP mode
+## Authentication
+
+This server uses the OAuth 2.0 **client credentials** grant type. Your `SHARESIGHT_CLIENT_ID` and `SHARESIGHT_CLIENT_SECRET` are passed as environment variables — no browser-based auth flow or stored token files required. Tokens are fetched automatically and refreshed in memory when they expire.
+
+## Install from Source
+
+```bash
+git clone https://github.com/robdevops/sharesight-mcp.git
+cd sharesight-mcp
+npm install
+npm run build
+```
+
+Then configure Claude Desktop to use the local build:
+
+```json
+{
+  "mcpServers": {
+    "sharesight": {
+      "command": "node",
+      "args": ["/path/to/sharesight-mcp/dist/index.js"],
+      "env": {
+        "SHARESIGHT_CLIENT_ID": "your_client_id",
+        "SHARESIGHT_CLIENT_SECRET": "your_client_secret"
+      }
+    }
+  }
+}
+```
+
+### Streamable HTTP mode
 
 By default the server speaks MCP over stdio. It can also run as a Streamable HTTP server, for clients that connect to a URL rather than launching a process.
 
-Build from source (see [Install from Source](#install-from-source)), then start it:
+After building as above, start it:
 
 ```bash
 SHARESIGHT_CLIENT_ID=... SHARESIGHT_CLIENT_SECRET=... \
@@ -93,7 +123,7 @@ The HTTP server is stateless (no sessions): each `POST /mcp` is handled independ
 
 > **Security warning:** the HTTP endpoint has **no authentication** and no `Origin`/`Host` validation, and every request is served using your Sharesight credentials. Anyone who can reach the port can read your portfolio data. Keep the default loopback binding, and do not use `--host 0.0.0.0` (or expose the port) unless you put it behind an authenticating reverse proxy or a firewall. Browsers can also reach localhost services via DNS rebinding, so only run it when you need it.
 
-### Run on boot (systemd)
+#### Run on boot (systemd)
 
 On Linux, run the server as a systemd user service. These steps assume the repo is built at `~/sharesight-mcp`.
 
@@ -135,36 +165,6 @@ On Linux, run the server as a systemd user service. These steps assume the repo 
 Check it with `systemctl --user status sharesight-mcp` and `journalctl --user -u sharesight-mcp -f`. After updating the code (`git pull && npm install && npm run build`), restart it with `systemctl --user restart sharesight-mcp`.
 
 An always-on server widens the exposure described in the warning above, so leave `--host` at its default (`127.0.0.1`).
-
-## Authentication
-
-This server uses the OAuth 2.0 **client credentials** grant type. Your `SHARESIGHT_CLIENT_ID` and `SHARESIGHT_CLIENT_SECRET` are passed as environment variables — no browser-based auth flow or stored token files required. Tokens are fetched automatically and refreshed in memory when they expire.
-
-## Install from Source
-
-```bash
-git clone https://github.com/robdevops/sharesight-mcp.git
-cd sharesight-mcp
-npm install
-npm run build
-```
-
-Then configure Claude Desktop to use the local build:
-
-```json
-{
-  "mcpServers": {
-    "sharesight": {
-      "command": "node",
-      "args": ["/path/to/sharesight-mcp/dist/index.js"],
-      "env": {
-        "SHARESIGHT_CLIENT_ID": "your_client_id",
-        "SHARESIGHT_CLIENT_SECRET": "your_client_secret"
-      }
-    }
-  }
-}
-```
 
 ## Development
 
