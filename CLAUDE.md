@@ -29,7 +29,7 @@ sharesight-mcp/
 ## Key Files
 
 ### `src/index.ts`
-The entry point. Reads `SHARESIGHT_CLIENT_ID` and `SHARESIGHT_CLIENT_SECRET` from env vars, creates the OAuth manager and Sharesight client, registers all MCP tools, and connects the stdio transport. No CLI commands — it just runs.
+The entry point. Reads `SHARESIGHT_CLIENT_ID` and `SHARESIGHT_CLIENT_SECRET` from env vars, creates the OAuth manager and Sharesight client, registers all MCP tools, and connects the stdio transport by default. Passing `--http` (with optional `--host`/`--port`) serves stateless Streamable HTTP at `/mcp` instead.
 
 ### `src/oauth.ts`
 OAuth 2.0 manager using the **client credentials** grant type. Fetches a token on first use, caches it in memory, and re-fetches automatically when it expires (Sharesight tokens last 30 minutes). No file storage.

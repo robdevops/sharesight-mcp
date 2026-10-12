@@ -11,6 +11,8 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { createServer } from "node:http";
 import { z } from "zod";
 import { SharesightClient } from "./sharesight-client.js";
 import { OAuthManager } from "./oauth.js";
@@ -85,6 +87,81 @@ function registerTools(server: McpServer, client: SharesightClient) {
   );
 }
 
+function createMcpServer(client: SharesightClient): McpServer {
+  const server = new McpServer({
+    name: "sharesight-mcp",
+    version: "1.0.0",
+  });
+
+  registerTools(server, client);
+  return server;
+}
+
+function getOption(args: string[], name: string, fallback: string): string {
+  const index = args.indexOf(name);
+  return index >= 0 ? (args[index + 1] ?? fallback) : fallback;
+}
+
+async function runStdio(client: SharesightClient): Promise<void> {
+  const server = createMcpServer(client);
+  await server.connect(new StdioServerTransport());
+  console.error("Sharesight MCP server running on stdio");
+}
+
+function runHttp(client: SharesightClient, host: string, port: number): void {
+  const httpServer = createServer(async (req, res) => {
+    const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
+
+    if (pathname !== "/mcp") {
+      res.writeHead(404).end("Not found");
+      return;
+    }
+
+    // Stateless mode: only POST is supported.
+    if (req.method !== "POST") {
+      res.writeHead(405, { Allow: "POST" }).end("Method not allowed");
+      return;
+    }
+
+    const server = createMcpServer(client);
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    });
+
+    res.on("close", () => {
+      void transport.close();
+      void server.close();
+    });
+
+    try {
+      await server.connect(transport);
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      console.error("MCP request failed:", error);
+
+      if (!res.headersSent) {
+        res.writeHead(500).end("Internal server error");
+      }
+    }
+  });
+
+  httpServer.on("error", (error) => {
+    console.error("HTTP server error:", error);
+    process.exit(1);
+  });
+
+  const shutdown = () => {
+    httpServer.close(() => process.exit(0));
+    httpServer.closeAllConnections();
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+
+  httpServer.listen(port, host, () => {
+    console.error(`Sharesight MCP server listening on http://${host}:${port}/mcp`);
+  });
+}
+
 async function main(): Promise<void> {
   const clientId = process.env.SHARESIGHT_CLIENT_ID;
   const clientSecret = process.env.SHARESIGHT_CLIENT_SECRET;
@@ -99,16 +176,21 @@ async function main(): Promise<void> {
   const oauth = new OAuthManager({ clientId, clientSecret });
   const client = new SharesightClient(oauth);
 
-  const server = new McpServer({
-    name: "sharesight-mcp",
-    version: "1.0.0",
-  });
+  const args = process.argv.slice(2);
 
-  registerTools(server, client);
+  if (!args.includes("--http")) {
+    await runStdio(client);
+    return;
+  }
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Sharesight MCP server running on stdio");
+  const host = getOption(args, "--host", "127.0.0.1");
+  const port = Number(getOption(args, "--port", "8932"));
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid port: ${getOption(args, "--port", "8932")}`);
+  }
+
+  runHttp(client, host, port);
 }
 
 main().catch((error) => {

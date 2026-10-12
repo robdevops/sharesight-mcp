@@ -54,6 +54,27 @@ Ask Claude things like:
 | `list_portfolios` | List all portfolios in the account |
 | `get_performance_report` | Get a full performance breakdown for a portfolio, including all holdings and their gains, over a specified date range |
 
+## Streamable HTTP mode
+
+By default the server speaks MCP over stdio. It can also run as a Streamable HTTP server, for clients that connect to a URL rather than launching a process:
+
+```bash
+SHARESIGHT_CLIENT_ID=... SHARESIGHT_CLIENT_SECRET=... \
+  node dist/index.js --http [--host 127.0.0.1] [--port 8932]
+```
+
+The endpoint is `http://127.0.0.1:8932/mcp`. Options:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--http` | off | Serve Streamable HTTP instead of stdio |
+| `--host` | `127.0.0.1` | Interface to bind to |
+| `--port` | `8932` | Port to listen on |
+
+The HTTP server is stateless (no sessions): each `POST /mcp` is handled independently, and other methods return `405`.
+
+> **Security warning:** the HTTP endpoint has **no authentication** and no `Origin`/`Host` validation, and every request is served using your Sharesight credentials. Anyone who can reach the port can read your portfolio data. Keep the default loopback binding, and do not use `--host 0.0.0.0` (or expose the port) unless you put it behind an authenticating reverse proxy or a firewall. Browsers can also reach localhost services via DNS rebinding, so only run it when you need it.
+
 ## Authentication
 
 This server uses the OAuth 2.0 **client credentials** grant type. Your `SHARESIGHT_CLIENT_ID` and `SHARESIGHT_CLIENT_SECRET` are passed as environment variables — no browser-based auth flow or stored token files required. Tokens are fetched automatically and refreshed in memory when they expire.
