@@ -12,7 +12,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createServer } from "node:http";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { createServer, type IncomingMessage } from "node:http";
 import { z } from "zod";
 import { SharesightClient } from "./sharesight-client.js";
 import { OAuthManager } from "./oauth.js";
@@ -102,18 +103,44 @@ function getOption(args: string[], name: string, fallback: string): string {
   return index >= 0 ? (args[index + 1] ?? fallback) : fallback;
 }
 
+function isLoopbackHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/^\[(.*)\]$/, "$1");
+  return h === "localhost" || h === "::1" || /^127(\.\d{1,3}){3}$/.test(h);
+}
+
+function sha256(value: string): Buffer {
+  return createHash("sha256").update(value).digest();
+}
+
+// Hashing both sides gives equal-length buffers, so the comparison is constant-time
+// and does not leak the token's length.
+function isAuthorized(req: IncomingMessage, token: string): boolean {
+  const match = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? "");
+  return match !== null && timingSafeEqual(sha256(match[1].trim()), sha256(token));
+}
+
 async function runStdio(client: SharesightClient): Promise<void> {
   const server = createMcpServer(client);
   await server.connect(new StdioServerTransport());
   console.error("Sharesight MCP server running on stdio");
 }
 
-function runHttp(client: SharesightClient, host: string, port: number): void {
+function runHttp(
+  client: SharesightClient,
+  host: string,
+  port: number,
+  token: string | undefined
+): void {
   const httpServer = createServer(async (req, res) => {
     const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
 
     if (pathname !== "/mcp") {
       res.writeHead(404).end("Not found");
+      return;
+    }
+
+    if (token && !isAuthorized(req, token)) {
+      res.writeHead(401, { "WWW-Authenticate": "Bearer" }).end("Unauthorized");
       return;
     }
 
@@ -159,6 +186,11 @@ function runHttp(client: SharesightClient, host: string, port: number): void {
 
   httpServer.listen(port, host, () => {
     console.error(`Sharesight MCP server listening on http://${host}:${port}/mcp`);
+    console.error(
+      token
+        ? "Bearer token authentication enabled"
+        : "WARNING: no SHARESIGHT_MCP_TOKEN set; the HTTP endpoint is unauthenticated"
+    );
   });
 }
 
@@ -190,7 +222,16 @@ async function main(): Promise<void> {
     throw new Error(`Invalid port: ${getOption(args, "--port", "8932")}`);
   }
 
-  runHttp(client, host, port);
+  const token = process.env.SHARESIGHT_MCP_TOKEN?.trim() || undefined;
+
+  if (!token && !isLoopbackHost(host) && !args.includes("--unsafe-no-token")) {
+    throw new Error(
+      `Refusing to bind to non-local host ${host} without authentication. ` +
+        "Set SHARESIGHT_MCP_TOKEN, or pass --unsafe-no-token to override."
+    );
+  }
+
+  runHttp(client, host, port, token);
 }
 
 main().catch((error) => {
