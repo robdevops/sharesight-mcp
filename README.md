@@ -106,6 +106,7 @@ The endpoint is `http://127.0.0.1:8932/mcp`. Options:
 | `--http` | off | Serve Streamable HTTP instead of stdio |
 | `--host` | `127.0.0.1` | Interface to bind to |
 | `--port` | `8932` | Port to listen on |
+| `--unsafe-no-token` | off | Allow binding to a non-local host without `SHARESIGHT_MCP_TOKEN` (not recommended) |
 
 Then point an MCP client that supports Streamable HTTP at the URL in its `mcp_servers.json` (or equivalent). The credentials stay with the server process, so the client entry needs only the URL:
 
@@ -121,7 +122,42 @@ Then point an MCP client that supports Streamable HTTP at the URL in its `mcp_se
 
 The HTTP server is stateless (no sessions): each `POST /mcp` is handled independently, and other methods return `405`.
 
-> **Security warning:** the HTTP endpoint has **no authentication** and no `Origin`/`Host` validation, and every request is served using your Sharesight credentials. Anyone who can reach the port can read your portfolio data. Keep the default loopback binding, and do not use `--host 0.0.0.0` (or expose the port) unless you put it behind an authenticating reverse proxy or a firewall. Browsers can also reach localhost services via DNS rebinding, so only run it when you need it.
+#### Bearer token authentication
+
+Set `SHARESIGHT_MCP_TOKEN` to require a bearer token on every request:
+
+```bash
+SHARESIGHT_MCP_TOKEN=secret /usr/bin/node /opt/sharesight-mcp/dist/index.js --http --host 127.0.0.1 --port 8932
+```
+
+Clients must then send:
+
+```
+Authorization: Bearer secret
+```
+
+Requests without the correct token get `401 Unauthorized`. In the client config, add the header to the entry, for clients that support custom headers:
+
+```json
+{
+  "mcpServers": {
+    "sharesight": {
+      "url": "http://127.0.0.1:8932/mcp",
+      "headers": {
+        "Authorization": "Bearer secret"
+      }
+    }
+  }
+}
+```
+
+Use a long random value, for example from `openssl rand -hex 32`.
+
+The server **refuses to bind to a non-local host** (anything other than `127.0.0.1`, `::1` or `localhost`, e.g. `--host 0.0.0.0`) unless `SHARESIGHT_MCP_TOKEN` is set, or `--unsafe-no-token` is explicitly supplied.
+
+The token is sent in plain HTTP. Over a network, put the server behind TLS (e.g. a reverse proxy) so the token and your portfolio data are not exposed in transit.
+
+> **Security warning:** without a token, the HTTP endpoint has **no authentication**, and every request is served using your Sharesight credentials. Anyone who can reach the port can read your portfolio data — including other users on the same machine, and web pages in your browser via DNS rebinding, even on the loopback address. Set `SHARESIGHT_MCP_TOKEN` whenever the server runs for long periods or on a shared machine.
 
 #### Run on boot (systemd)
 
@@ -135,7 +171,10 @@ On Linux, run the server as a systemd user service. These steps assume the repo 
    chmod 600 ~/.config/sharesight-mcp/env
    echo 'SHARESIGHT_CLIENT_ID=your_client_id' >> ~/.config/sharesight-mcp/env
    echo 'SHARESIGHT_CLIENT_SECRET=your_client_secret' >> ~/.config/sharesight-mcp/env
+   echo "SHARESIGHT_MCP_TOKEN=$(openssl rand -hex 32)" >> ~/.config/sharesight-mcp/env
    ```
+
+   The last line generates a bearer token; copy it from the file into your client's `Authorization` header.
 
 2. Create `~/.config/systemd/user/sharesight-mcp.service`:
 
@@ -167,7 +206,7 @@ On Linux, run the server as a systemd user service. These steps assume the repo 
 
 Check it with `systemctl --user status sharesight-mcp` and `journalctl --user -u sharesight-mcp -f`. After updating the code (`git pull && npm install && npm run build`), restart it with `systemctl --user restart sharesight-mcp`.
 
-An always-on server widens the exposure described in the warning above, so leave `--host` at its default (`127.0.0.1`).
+An always-on server widens the exposure described in the warning above, so keep the token set and leave `--host` at its default (`127.0.0.1`) unless you need network access.
 
 ## Development
 
