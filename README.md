@@ -127,7 +127,8 @@ The HTTP server is stateless (no sessions): each `POST /mcp` is handled independ
 Set `SHARESIGHT_MCP_TOKEN` to require a bearer token on every request:
 
 ```bash
-SHARESIGHT_MCP_TOKEN=secret /usr/bin/node /opt/sharesight-mcp/dist/index.js --http --host 127.0.0.1 --port 8932
+SHARESIGHT_CLIENT_ID=... SHARESIGHT_CLIENT_SECRET=... SHARESIGHT_MCP_TOKEN=secret \
+  node dist/index.js --http [--host 127.0.0.1] [--port 8932]
 ```
 
 Clients must then send:
