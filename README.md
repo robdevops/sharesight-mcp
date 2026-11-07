@@ -108,7 +108,7 @@ The endpoint is `http://127.0.0.1:8932/mcp`. Options:
 | `--port` | `8932` | Port to listen on |
 | `--unsafe-no-token` | off | Allow binding to a non-local host without `SHARESIGHT_MCP_TOKEN` (not recommended) |
 
-Then point an MCP client that supports Streamable HTTP at the URL in its `mcp_servers.json` (or equivalent). The credentials stay with the server process, so the client entry needs only the URL:
+Then point an MCP client that supports Streamable HTTP at the URL in its `mcp_servers.json` (or equivalent). The Sharesight credentials stay with the server process, so without a token the client entry needs only the URL (if you set `SHARESIGHT_MCP_TOKEN`, also add the header shown in [Bearer token authentication](#bearer-token-authentication)):
 
 ```json
 {
@@ -120,7 +120,7 @@ Then point an MCP client that supports Streamable HTTP at the URL in its `mcp_se
 }
 ```
 
-The HTTP server is stateless (no sessions): each `POST /mcp` is handled independently, and other methods return `405`.
+The HTTP server is stateless (no sessions): each `POST /mcp` is handled independently, and other methods return `405` (when a token is set, requests without it get `401` first).
 
 #### Bearer token authentication
 
@@ -153,7 +153,7 @@ Requests without the correct token get `401 Unauthorized`. In the client config,
 
 Use a long random value, for example from `openssl rand -hex 32`.
 
-The server **refuses to bind to a non-local host** (anything other than `127.0.0.1`, `::1` or `localhost`, e.g. `--host 0.0.0.0`) unless `SHARESIGHT_MCP_TOKEN` is set, or `--unsafe-no-token` is explicitly supplied.
+The server **refuses to bind to a non-local host** (anything other than `localhost`, `::1` or a `127.x.x.x` address, e.g. `--host 0.0.0.0`) unless `SHARESIGHT_MCP_TOKEN` is set, or `--unsafe-no-token` is explicitly supplied.
 
 The token is sent in plain HTTP. Over a network, put the server behind TLS (e.g. a reverse proxy) so the token and your portfolio data are not exposed in transit.
 
