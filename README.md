@@ -145,12 +145,14 @@ Requests without the correct token get `401 Unauthorized`. In the client config,
     "sharesight": {
       "url": "http://127.0.0.1:8932/mcp",
       "headers": {
-        "Authorization": "Bearer secret"
+        "Authorization": "Bearer ${SHARESIGHT_MCP_TOKEN}"
       }
     }
   }
 }
 ```
+
+`${SHARESIGHT_MCP_TOKEN}` only works if your client expands environment variables in its config; otherwise put the token in literally (`"Bearer <token>"`).
 
 Use a long random value, for example from `openssl rand -hex 32`.
 
