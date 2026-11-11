@@ -26,7 +26,7 @@ Add to your Claude Desktop config file:
   "mcpServers": {
     "sharesight": {
       "command": "npx",
-      "args": ["-y", "github:robdevops/sharesight-mcp"],
+      "args": ["--allow-git=all", "-y", "github:robdevops/sharesight-mcp"],
       "env": {
         "SHARESIGHT_CLIENT_ID": "your_client_id",
         "SHARESIGHT_CLIENT_SECRET": "your_client_secret"
